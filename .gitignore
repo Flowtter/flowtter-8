@@ -1,3 +1,4 @@
 *.swp
-a.out
+chip8
 include/*.h.gch
+Makefile

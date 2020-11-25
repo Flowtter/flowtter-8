@@ -1,15 +1,21 @@
 CC := gcc
 
-CPPFLAGS := `pkg-config --cflags sdl` -MMD
-CFLAGS := -Wall -Wextra -Werror -std=c99 -O3
-LDLIBS := `pkg-config --libs sdl` 
+CPPFLAGS := `pkg-config --cflags sdl` -I include/
+CFLAGS := -Wall -Wextra -Werror -std=c99 -O3 
+LDLIBS := `pkg-config --libs sdl`
 
-DBGCFLAGS := $(CFLAGS) -g -O0 -DDEBUG
+DBGCFLAGS := $(CFLAGS)
 
 S_DIR := src
-H_DIR := include
+TST_DIR := test
 
-S_FILES := $(S_DIR)/*.c
+S_FILES := $(wildcard $(S_DIR)/*.c)
+S_NOT_MAIN_FILES := $(filter-out src/main.c, $(S_FILES))
+TST_FILES := $(TST_DIR)/*.c
 
-all: 
-	$(CC) $(DBGCFLAGS) -I $(H_DIR) $(S_FILES) $(LDLIBS)
+all:
+	$(CC) $(S_FILES) -o chip8 $(DBGCFLAGS) $(CPPFLAGS) $(LDLIBS) 
+
+.PHONY: all test clean
+test:
+	$(CC) $(TST_FILES) -o chip8 $(DBGCFLAGS) $(CPPFLAGS) $(S_NOT_MAIN_FILES) $(LDLIBS)
