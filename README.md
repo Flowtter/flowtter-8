@@ -6,10 +6,10 @@ Flowtter 8 is a chip 8 emulator written in c.
 - make
 - [unity](https://github.com/ThrowTheSwitch/Unity)
 
-### Install
-git clone git@github.com:Flowtter/Flowtter-8.git
-cd Flowtter-8
-make
+## Install
+- git clone git@github.com:Flowtter/Flowtter-8.git  
+- cd Flowtter-8  
+- make  
 
-### License
+## License
 MIT Flowtter
