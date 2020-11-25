@@ -4,7 +4,6 @@
 
 #include "sdl_utils.h"
 
-#define MEMORY_SIZE 4096
 #define WIDTH 64
 #define HEIGHT 32
 #define SCREEN_SCALE 10

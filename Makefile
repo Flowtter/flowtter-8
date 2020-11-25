@@ -1,6 +1,6 @@
 CC := gcc
 
-CPPFLAGS := `pkg-config --cflags sdl` -I include/
+CPPFLAGS := `pkg-config --cflags sdl` -Iinclude/
 CFLAGS := -Wall -Wextra -Werror -std=c99 -O3 
 LDLIBS := `pkg-config --libs sdl`
 
