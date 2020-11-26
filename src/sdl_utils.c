@@ -6,11 +6,13 @@
 #include "sdl_utils.h"
 
 SDL_Surface *get_pixel_square(SDL_Rect position) {
-    if (position.x > SCREEN_SCALE * (WIDTH - 1) || position.y > SCREEN_SCALE * (HEIGHT - 1))
+    if (position.x > SCREEN_SCALE * (WIDTH - 1)
+        || position.y > SCREEN_SCALE * (HEIGHT - 1))
         errx(1, "Pixel out of range");
 
     SDL_Surface *square;
-    square = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_SCALE, SCREEN_SCALE, 32, 0, 0, 0, 0);
+    square = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_SCALE, SCREEN_SCALE, 32,
+                                  0, 0, 0, 0);
     return square;
 }
 
