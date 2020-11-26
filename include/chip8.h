@@ -1,8 +1,7 @@
 #ifndef CHIP_8_H
 #define CHIP_8_H
 
-unsigned char chip8_fontset[80] =
-{ 
+unsigned char Chip8fontset[80] = {
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
   0x20, 0x60, 0x20, 0x20, 0x70, // 1
   0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -25,7 +24,7 @@ typedef struct Chip_8 Chip8;
 struct Chip_8 {
     unsigned char memory[4096];
     unsigned short opcode;
-    unsigned char registers[16];
+    unsigned char v[16];
     unsigned short index;
     unsigned short pc;
     unsigned char graphics[64 * 32];
@@ -37,4 +36,4 @@ struct Chip_8 {
     unsigned char drawFlag;
 };
 
-#endif  // CHIP_8_H
+#endif // CHIP_8_H

@@ -3,7 +3,7 @@
 
 #include <SDL/SDL.h>
 
-SDL_Surface* get_pixel_square(SDL_Rect position);
+SDL_Surface *get_pixel_square(SDL_Rect position);
 void draw_pixel_square(SDL_Surface *screen, int x, int y);
 
 #endif

@@ -6,7 +6,6 @@
 #define HEIGHT 32
 #define SCREEN_SCALE 10
 
-
 void draw_pixel_tests() {
     SDL_Rect position;
     position.x = 0;

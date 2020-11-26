@@ -1,4 +1,4 @@
-# Chip8's OPCODE
+# Chip8's OPCODES
 [original table](https://en.wikipedia.org/wiki/CHIP-8)
 
 |Opcode |Type   |C Pseudo                                                 |Explanation                                                                                                                                                                                                                                                                                                                                                                              |

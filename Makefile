@@ -19,3 +19,6 @@ all:
 .PHONY: all test clean
 test:
 	$(CC) $(TST_FILES) -o chip8 $(DBGCFLAGS) $(CPPFLAGS) $(S_NOT_MAIN_FILES) $(LDLIBS)
+
+format: src/*.c include/*.h test/*.c
+	@clang-format --style=file -i $^
