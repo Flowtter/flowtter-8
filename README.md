@@ -1,7 +1,7 @@
 # Flowtter-8
 Flowtter 8 is a chip 8 emulator written in c.
 
-[](assets/flowtter.gif)
+![](assets/flowtter.gif)
 
 ## Requirements
 - gcc
