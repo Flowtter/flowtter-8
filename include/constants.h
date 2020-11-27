@@ -4,6 +4,6 @@
 #define WIDTH 64
 #define HEIGHT 32
 #define SCREEN_SCALE 10
-#define HERTZ 500
+#define UPD_SEC 800
 
 #endif

@@ -8,6 +8,25 @@
 
 #define UNUSED(x) (void) (x)
 
+void PRINT_MEMORY(Chip8 *chip) {
+    for (int i = 0x000; i < 800; i++) {
+        if (i < 80)
+            printf("\033[1;34m%02X \033[0m", chip->memory[i]);
+        else if (i < 0x200)
+            printf("\033[1;32m%02X \033[0m", chip->memory[i]);
+        else
+            printf("\033[1;33m%02X \033[0m", chip->memory[i]);
+    }
+    printf("\n");
+}
+
+void PRINT_GRAPHICS(Chip8 *chip) {
+    for (int i = 0x000; i < WIDTH * HEIGHT; i++) {
+        printf("\033[1;36m%02X \033[0m", chip->graphics[i]);
+    }
+    printf("\n");
+}
+
 unsigned char Chip8fontset[80] = {
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
   0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -29,27 +48,67 @@ unsigned char Chip8fontset[80] = {
 
 void chip_initialize(Chip8 *chip) {
     chip->pc = 0x200;
-    chip->opcode = 0;
+    chip->opcode = 0x200;
     chip->index = 0;
     chip->sp = 0;
+    chip->delay_timer = 0;
+    chip->sound_timer = 0;
+    chip->drawFlag=1;
+    memset(chip->memory, 0, sizeof(chip->memory));
+    memset(chip->graphics, 0, sizeof(chip->graphics));
+    memset(chip->stack, 0, sizeof(chip->stack));
+    memset(chip->v, 0, sizeof(chip->v));
+    memset(chip->keys, 0, sizeof(chip->keys));
     // Load fontset
-    for (int i = 0; i < 80; ++i)
+    for (int i = 0; i < 80; i++) {
         chip->memory[i] = Chip8fontset[i];
+    }
+}
+
+void emulate_graphics(Chip8 *chip, SDL_Surface *screen) {
+    // PRINT_GRAPHICS(chip);
+    // chip->drawFlag = 0;
+    for (size_t x = 0; x < WIDTH; x++) {
+        for (size_t y = 0; y < HEIGHT; y++) {
+            if (chip->graphics[y * WIDTH + x]) {
+                draw_pixel_square(screen, x, y);
+            }
+        }
+    }
+    SDL_Flip(screen);
+}
+
+void load_game(Chip8 *chip, char *path) {
+    FILE *f;
+    f = fopen(path, "rb");
+    if (!f)
+        errx(1, "Could not load game.\n");
+
+    size_t unused = fread(chip->memory + 0x200, 1, 4096 - 0x0200, f);
+    PRINT_MEMORY(chip);
+    UNUSED(unused);
 }
 
 void unknown(Chip8 *chip) {
-    printf("\033[1;31mUnknown opcode: 0x%04X\n\033[0m;", chip->opcode);
+    printf("\033[1;31mUnknown opcode: 0x%04X\n\033[0m", chip->opcode);
     chip->pc += 2;
 }
 
 void emulate_cycle(Chip8 *chip) {
-    chip->opcode =  chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
-    printf("%d\n",  chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
-    printf("  0x%04X\n",  chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
-    printf("& 0x%04X\n", (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) & 0xF000);
-    printf("| 0x%04X\n", (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) & 0x000F);
-    printf("Executing %04X at %04X , I:%02X SP:%02X\n", chip->opcode, chip->pc,
-           chip->index, chip->sp);
+    chip->opcode = chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
+
+    // printf("  %d\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc +
+    // 1]); printf("  0x%04X\n",
+    //       chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+    // printf("& 0x%04X\n",
+    //       (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) &
+    //       0xF000);
+    // printf("| 0x%04X\n",
+    //       (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) &
+    //       0x000F);
+    // printf("Executing %04X at %04X , I:%02X SP:%02X\n", chip->opcode,
+    // chip->pc,
+    //       chip->index, chip->sp);
     switch (chip->opcode & 0xF000) {
         // - 0xNNNN
         // - 0x00E0
@@ -58,21 +117,21 @@ void emulate_cycle(Chip8 *chip) {
             switch (chip->opcode & 0x000F) {
                 // - 0x00E0
                 case 0x0000: {
-                    for (int i = 0; i < WIDTH * HEIGHT; i++)
-                        chip->graphics[i] = 0;
+                    memset(chip->graphics, 0, sizeof(chip->graphics));
                     chip->drawFlag = 1;
                     chip->pc += 2;
                     break;
                 }
                 // - 0x00EE
                 case 0x000E: {
-                    chip->sp--;
                     chip->pc = chip->stack[chip->sp];
+                    chip->sp--;
                     chip->pc += 2;
                     break;
                 }
                 default:
                     unknown(chip);
+                    break;
             }
             break;
         }
@@ -83,8 +142,8 @@ void emulate_cycle(Chip8 *chip) {
         }
         // - 0x2000
         case 0x2000: {
-            chip->stack[chip->sp] = chip->pc;
             chip->sp++;
+            chip->stack[chip->sp & 0xF] = chip->pc;
             chip->pc = chip->opcode & 0x0FFF;
             break;
         }
@@ -160,32 +219,32 @@ void emulate_cycle(Chip8 *chip) {
                 }
                 // - 0x8XY4
                 case 0x0004: {
-                    chip->v[0xF] = chip->v[y] > chip->v[x] ? 1 : 0;
-                    chip->v[x] += chip->v[0xF];
+                    chip->v[0xF] = (int)chip->v[x] + (int)chip->v[y] < 256 ? 0 : 1;
+                    chip->v[x] += chip->v[y];
                     break;
                 }
                 // - 0x8XY5
                 case 0x0005: {
-                    chip->v[0xF] = chip->v[y] > chip->v[x] ? 0 : 1;
+                    chip->v[0xF] = (int)chip->v[y] - (int)chip->v[x] >= 0 ? 1 : 0;
                     chip->v[x] -= chip->v[y];
                     break;
                 }
                 // - 0x8XY6
                 case 0x0006: {
-                    chip->v[0xF] = x & 0x1;
-                    chip->v[x] >>= 4;
+                    chip->v[0xF] = x & 0x7;
+                    chip->v[x] >>= 1; // DOUBT ---------------------------------
                     break;
                 }
                 // - 0x8XY7
                 case 0x0007: {
-                    chip->v[0xF] = chip->v[x] > chip->v[y] ? 0 : 1;
+                    chip->v[0xF] = chip->v[x] > chip->v[y] ? 1 : 0;
                     chip->v[x] = chip->v[y] - chip->v[x];
                     break;
                 }
                 // - 0x8XYE
                 case 0x000E: {
                     chip->v[0xF] = x >> 7;
-                    chip->v[x] <<= 4;
+                    chip->v[x] <<= 1;  // DOUBT
                     break;
                 }
                 default:
@@ -217,33 +276,23 @@ void emulate_cycle(Chip8 *chip) {
         case 0xC000: {
             unsigned short nn = chip->opcode & 0x00FF;
             unsigned short x = chip->opcode & 0x0F00;
-            chip->v[x >> 8] = (rand() % 0xFF) & nn;
+            chip->v[x >> 8] = rand() & nn;
             chip->pc += 2;
             break;
         }
         // - 0xDXYN
         case 0xD000: {
-            unsigned short x = (chip->opcode & 0x0F00) >> 8;
-            unsigned short y = (chip->opcode & 0x00F0) >> 4;
-            unsigned short n = chip->opcode & 0x000F;
-
-            unsigned char x_pos = chip->v[x];
-            unsigned char y_pos = chip->v[y];
-
-            unsigned short pixel;
-            chip->v[0xF] = 0;
-            for (int y_line = 0; y_line < n; y_line++) {
-                pixel = chip->memory[chip->index + y_line];
-
-                for (int x_line = 0; x_line < 8; x_line++) {
-                    if ((pixel & (0x80 >> x_line)) != 0) {
-                        if (chip->graphics[(x_pos + x_line
-                                            + ((y_pos + y_line) * WIDTH))]
-                            == 1)
+            int vx = chip->v[(chip->opcode & 0x0F00) >> 8];
+            int vy = chip->v[(chip->opcode & 0x00F0) >> 4];
+            unsigned int height = chip->opcode & 0x000F;
+            chip->v[0xF] &= 0;
+            for (unsigned int y = 0; y < height; y++) {
+                unsigned int pixel = chip->memory[chip->index + y];
+                for (unsigned int x = 0; x < 8; x++) {
+                    if (pixel & (0x80 >> x)) {
+                        if (chip->graphics[x + vx + (y + vy) * 64])
                             chip->v[0xF] = 1;
-                        chip->graphics[x_pos + x_line
-                                       + ((y_pos + y_line) * WIDTH)]
-                          ^= 1;
+                        chip->graphics[x + vx + (y + vy) * 64] ^= 1;
                     }
                 }
             }
@@ -359,33 +408,13 @@ void emulate_cycle(Chip8 *chip) {
 
         default:
             unknown(chip);
-
-            if (chip->delay_timer > 0)
-                --chip->delay_timer;
-            if (chip->sound_timer > 0) {
-                if (chip->sound_timer == 1)
-                    printf("BEEP!\n");
-                --chip->sound_timer;
-            }
+            break;
     }
-}
-
-void emulate_graphics(Chip8 *chip, SDL_Surface *screen) {
-    chip->drawFlag = 0;
-    for (size_t x = 0; x < WIDTH; x++) {
-        for (size_t y = 0; y < HEIGHT; y++) {
-            if (chip->memory[x * HEIGHT + y])
-                draw_pixel_square(screen, x, y);
-        }
+    if (chip->delay_timer > 0)
+        --chip->delay_timer;
+    if (chip->sound_timer > 0) {
+        if (chip->sound_timer == 1)
+            printf("BEEP!\n");
+        --chip->sound_timer;
     }
-    SDL_Flip(screen);
-}
-
-void load_game(Chip8 *chip, char *path) {
-    FILE *f;
-    f = fopen(path, "rb");
-    if (!f)
-        errx(1, "Could not load game.\n");
-    size_t unused = fread(chip->memory + 80, 1, 4016, f);
-    UNUSED(unused);
 }

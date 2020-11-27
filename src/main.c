@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <err.h>
+#include <unistd.h>
 
 #include "constants.h"
 #include "chip8.h"
 #include "sdl_utils.h"
 
-void PRINT_MEMORY(Chip8 chip) {
-    for (int i = 0; i < 4096; i++) {
-        printf("%d ", chip.memory[i]);
+void P_GRAPHICS(Chip8 *chip) {
+    for (int i = 0x000; i < WIDTH * HEIGHT; i++) {
+        printf("\033[1;36m%02X \033[0m", chip->graphics[i]);
     }
     printf("\n");
 }
@@ -25,21 +26,24 @@ int main() {
 
     Chip8 chip;
     chip_initialize(&chip);
-    load_game(&chip, "BCTEST");
-    // PRINT_MEMORY(chip);
-    // return 0;
-    // TODO : Clock
+    P_GRAPHICS(&chip);
+    load_game(&chip, "PONG");
+    printf("\033[0m");
+
     int loop = 1;
     SDL_Event event;
     while (loop) {
-        SDL_WaitEvent(&event);
+        SDL_PollEvent (&event);
         if (event.type == SDL_QUIT)
             loop = 0;
 
         emulate_cycle(&chip);
-
-        if (1 || chip.drawFlag)
+        if(chip.drawFlag){
+            clear_screen(screen);
             emulate_graphics(&chip, screen);
+            chip.drawFlag = 0;
+        }
+        usleep(UPD_SEC);
     }
 
     return 0;
