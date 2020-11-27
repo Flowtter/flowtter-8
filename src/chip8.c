@@ -53,7 +53,7 @@ void chip_initialize(Chip8 *chip) {
     chip->sp = 0;
     chip->delay_timer = 0;
     chip->sound_timer = 0;
-    chip->drawFlag=1;
+    chip->drawFlag = 1;
     memset(chip->memory, 0, sizeof(chip->memory));
     memset(chip->graphics, 0, sizeof(chip->graphics));
     memset(chip->stack, 0, sizeof(chip->stack));
@@ -219,13 +219,15 @@ void emulate_cycle(Chip8 *chip) {
                 }
                 // - 0x8XY4
                 case 0x0004: {
-                    chip->v[0xF] = (int)chip->v[x] + (int)chip->v[y] < 256 ? 0 : 1;
+                    chip->v[0xF]
+                      = (int) chip->v[x] + (int) chip->v[y] < 256 ? 0 : 1;
                     chip->v[x] += chip->v[y];
                     break;
                 }
                 // - 0x8XY5
                 case 0x0005: {
-                    chip->v[0xF] = (int)chip->v[y] - (int)chip->v[x] >= 0 ? 1 : 0;
+                    chip->v[0xF]
+                      = (int) chip->v[y] - (int) chip->v[x] >= 0 ? 1 : 0;
                     chip->v[x] -= chip->v[y];
                     break;
                 }
@@ -244,7 +246,7 @@ void emulate_cycle(Chip8 *chip) {
                 // - 0x8XYE
                 case 0x000E: {
                     chip->v[0xF] = x >> 7;
-                    chip->v[x] <<= 1;  // DOUBT
+                    chip->v[x] <<= 1; // DOUBT
                     break;
                 }
                 default:

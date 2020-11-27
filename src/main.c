@@ -33,12 +33,12 @@ int main() {
     int loop = 1;
     SDL_Event event;
     while (loop) {
-        SDL_PollEvent (&event);
+        SDL_PollEvent(&event);
         if (event.type == SDL_QUIT)
             loop = 0;
 
         emulate_cycle(&chip);
-        if(chip.drawFlag){
+        if (chip.drawFlag) {
             clear_screen(screen);
             emulate_graphics(&chip, screen);
             chip.drawFlag = 0;

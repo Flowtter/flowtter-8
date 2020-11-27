@@ -27,15 +27,15 @@ void draw_pixel_square(SDL_Surface *screen, int x, int y) {
 }
 
 void clear_screen(SDL_Surface *screen) {
-    for(int x = 0; x < WIDTH; x++) {
-        for(int y = 0; y < HEIGHT; y++) {
-                SDL_Rect position;
-                position.x = x * SCREEN_SCALE;
-                position.y = y * SCREEN_SCALE;
+    for (int x = 0; x < WIDTH; x++) {
+        for (int y = 0; y < HEIGHT; y++) {
+            SDL_Rect position;
+            position.x = x * SCREEN_SCALE;
+            position.y = y * SCREEN_SCALE;
 
-                SDL_Surface *square = get_pixel_square(position);
-                SDL_FillRect(square, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
-                SDL_BlitSurface(square, NULL, screen, &position);
+            SDL_Surface *square = get_pixel_square(position);
+            SDL_FillRect(square, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
+            SDL_BlitSurface(square, NULL, screen, &position);
         }
     }
 }

@@ -52,7 +52,8 @@ void assert_chip8(Chip8 *test, Chip8 *result) {
         printf("pc issue: got %d, expected %d\n", test->pc, result->pc);
 
     if (test->index != result->index)
-        printf("index issue: got %d, expected %d\n", test->index, result->index);
+        printf("index issue: got %d, expected %d\n", test->index,
+               result->index);
 
     if (test->sp != result->sp)
         printf("sp issue: got %d, expected %d\n", test->sp, result->sp);
@@ -60,21 +61,22 @@ void assert_chip8(Chip8 *test, Chip8 *result) {
     if (result->stack) {
         for (int i = 0; i < 16; i++) {
             if (test->stack[i] != result->stack[i])
-                printf("stack %d issue: got %d, expected %d\n", i, test->stack[i],
-                       result->stack[i]);
+                printf("stack %d issue: got %d, expected %d\n", i,
+                       test->stack[i], result->stack[i]);
         }
     }
     if (test->v) {
         for (int i = 0; i < 16; i++) {
             if (test->v[i] != result->v[i])
-                printf("v %d issue: got %d, expected %d\n", i, test->v[i], result->v[i]);
+                printf("v %d issue: got %d, expected %d\n", i, test->v[i],
+                       result->v[i]);
         }
     }
     if (result->graphics) {
         for (int i = 0; i < 2048; i++) {
             if (test->graphics[i] != result->graphics[i])
-                printf("v %d issue: got %d, expected %d\n", i, test->graphics[i],
-                       result->graphics[i]);
+                printf("v %d issue: got %d, expected %d\n", i,
+                       test->graphics[i], result->graphics[i]);
         }
     }
 }
@@ -112,7 +114,7 @@ int main() {
     // - 0x00E0
     test_chip8(0x00E0, 514, 0, 0, NULL, NULL, NULL);
     // - 0x00EE
-    
+
     // - 0x1NNN
     test_chip8(0x1050, 0x0050, 0, 0, NULL, NULL, NULL);
     // - 0x1NNN
