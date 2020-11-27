@@ -37,6 +37,11 @@ int main() {
         if (event.type == SDL_QUIT)
             loop = 0;
 
+        if (event.type == SDL_KEYUP)
+            emulate_keys(&chip, event.key.keysym.sym, 0);
+        else if (event.type == SDL_KEYDOWN)
+            emulate_keys(&chip, event.key.keysym.sym, 1);
+
         emulate_cycle(&chip);
         if (chip.drawFlag) {
             clear_screen(screen);

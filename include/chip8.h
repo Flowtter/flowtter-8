@@ -21,6 +21,7 @@ struct Chip_8 {
 
 void chip_initialize(Chip8 *chip);
 void emulate_cycle(Chip8 *chip);
+void emulate_keys(Chip8 *chip, SDLKey key, unsigned char state);
 void emulate_graphics(Chip8 *chip, SDL_Surface *screen);
 void load_game(Chip8 *chip, char *path);
 

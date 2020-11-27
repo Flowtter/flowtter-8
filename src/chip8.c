@@ -46,6 +46,10 @@ unsigned char Chip8fontset[80] = {
   0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+SDLKey keymap[0x10]
+  = {SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7,
+     SDLK_8, SDLK_9, SDLK_a, SDLK_z, SDLK_e, SDLK_r, SDLK_t, SDLK_y};
+
 void chip_initialize(Chip8 *chip) {
     chip->pc = 0x200;
     chip->opcode = 0x200;
@@ -62,6 +66,15 @@ void chip_initialize(Chip8 *chip) {
     // Load fontset
     for (int i = 0; i < 80; i++) {
         chip->memory[i] = Chip8fontset[i];
+    }
+}
+
+void emulate_keys(Chip8 *chip, SDLKey key, unsigned char state) {
+    for (int i = 0; i < 0xF; i++) {
+        if (key == keymap[i]) {
+            chip->keys[i] = state;
+            return;
+        }
     }
 }
 
@@ -96,19 +109,10 @@ void unknown(Chip8 *chip) {
 
 void emulate_cycle(Chip8 *chip) {
     chip->opcode = chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
-
-    // printf("  %d\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc +
-    // 1]); printf("  0x%04X\n",
-    //       chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
-    // printf("& 0x%04X\n",
-    //       (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) &
-    //       0xF000);
-    // printf("| 0x%04X\n",
-    //       (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) &
-    //       0x000F);
-    // printf("Executing %04X at %04X , I:%02X SP:%02X\n", chip->opcode,
-    // chip->pc,
-    //       chip->index, chip->sp);
+    unsigned short nn = chip->opcode & 0x00FF;
+    unsigned short nnn = chip->opcode & 0x0FFF;
+    unsigned short x = (chip->opcode & 0x0F00) >> 8;
+    unsigned short y = (chip->opcode & 0x00F0) >> 4;
     switch (chip->opcode & 0xF000) {
         // - 0xNNNN
         // - 0x00E0
@@ -124,8 +128,8 @@ void emulate_cycle(Chip8 *chip) {
                 }
                 // - 0x00EE
                 case 0x000E: {
-                    chip->pc = chip->stack[chip->sp];
                     chip->sp--;
+                    chip->pc = chip->stack[chip->sp];
                     chip->pc += 2;
                     break;
                 }
@@ -142,45 +146,35 @@ void emulate_cycle(Chip8 *chip) {
         }
         // - 0x2000
         case 0x2000: {
+            chip->stack[chip->sp] = chip->pc;
             chip->sp++;
-            chip->stack[chip->sp & 0xF] = chip->pc;
             chip->pc = chip->opcode & 0x0FFF;
             break;
         }
         // - 0x3XNN
         case 0x3000: {
-            unsigned short x = chip->opcode & 0x0F00;
-            unsigned short nn = chip->opcode & 0x00FF;
-            chip->pc += chip->v[x >> 8] == nn ? 4 : 2;
+            chip->pc += chip->v[x] == nn ? 4 : 2;
             break;
         }
         // - 0x4XNN
         case 0x4000: {
-            unsigned short x = chip->opcode & 0x0F00;
-            unsigned short nn = chip->opcode & 0x00FF;
-            chip->pc += chip->v[x >> 8] != nn ? 4 : 2;
+            chip->pc += chip->v[x] != nn ? 4 : 2;
             break;
         }
         // - 0x5XY0
         case 0x5000: {
-            unsigned short x = chip->opcode & 0x0F00;
-            unsigned short y = chip->opcode & 0x00F0;
-            chip->pc += chip->v[x >> 8] == chip->v[y >> 4] ? 4 : 2;
+            chip->pc += chip->v[x] == chip->v[y] ? 4 : 2;
             break;
         }
         // - 0x6XNN
         case 0x6000: {
-            unsigned short x = chip->opcode & 0x0F00;
-            unsigned short nn = chip->opcode & 0x00FF;
-            chip->v[x >> 8] = nn;
+            chip->v[x] = nn;
             chip->pc += 2;
             break;
         }
         // - 0x7XNN
         case 0x7000: {
-            unsigned short x = chip->opcode & 0x0F00;
-            unsigned short nn = chip->opcode & 0x00FF;
-            chip->v[x >> 8] += nn;
+            chip->v[x] += nn;
             chip->pc += 2;
             break;
         }
@@ -194,8 +188,6 @@ void emulate_cycle(Chip8 *chip) {
         // - 0x8XY7
         // - 0x8XYE
         case 0x8000: {
-            unsigned short x = (chip->opcode & 0x0F00) >> 8;
-            unsigned short y = (chip->opcode & 0x00F0) >> 4;
             switch (chip->opcode & 0x000F) {
                 // - 0x8XY0
                 case 0x0000: {
@@ -219,33 +211,31 @@ void emulate_cycle(Chip8 *chip) {
                 }
                 // - 0x8XY4
                 case 0x0004: {
-                    chip->v[0xF]
-                      = (int) chip->v[x] + (int) chip->v[y] < 256 ? 0 : 1;
+                    chip->v[0xF] = chip->v[y] > chip->v[x] ? 1 : 0;
                     chip->v[x] += chip->v[y];
                     break;
                 }
                 // - 0x8XY5
                 case 0x0005: {
-                    chip->v[0xF]
-                      = (int) chip->v[y] - (int) chip->v[x] >= 0 ? 1 : 0;
+                    chip->v[0xF] = chip->v[y] > chip->v[x] ? 0 : 1;
                     chip->v[x] -= chip->v[y];
                     break;
                 }
                 // - 0x8XY6
                 case 0x0006: {
-                    chip->v[0xF] = x & 0x7;
+                    chip->v[0xF] = chip->v[x] & 0x1;
                     chip->v[x] >>= 1; // DOUBT ---------------------------------
                     break;
                 }
                 // - 0x8XY7
                 case 0x0007: {
-                    chip->v[0xF] = chip->v[x] > chip->v[y] ? 1 : 0;
+                    chip->v[0xF] = chip->v[x] > chip->v[y] ? 0 : 1;
                     chip->v[x] = chip->v[y] - chip->v[x];
                     break;
                 }
                 // - 0x8XYE
                 case 0x000E: {
-                    chip->v[0xF] = x >> 7;
+                    chip->v[0xF] = chip->v[x] >> 7;
                     chip->v[x] <<= 1; // DOUBT
                     break;
                 }
@@ -257,9 +247,7 @@ void emulate_cycle(Chip8 *chip) {
         }
         // - 0x9XY0
         case 0x9000: {
-            unsigned short x = chip->opcode & 0x0F00;
-            unsigned short y = chip->opcode & 0x00F0;
-            chip->pc += chip->v[x >> 8] != chip->v[y >> 4] ? 4 : 2;
+            chip->pc += chip->v[x] != chip->v[y] ? 4 : 2;
             break;
         }
         // - 0xANNN
@@ -270,24 +258,23 @@ void emulate_cycle(Chip8 *chip) {
         }
         // - 0xBNNN
         case 0xB000: {
-            unsigned short nnn = chip->opcode & 0x0FFF;
             chip->pc = chip->v[0x0] + nnn;
             break;
         }
         // - 0xCXNN
         case 0xC000: {
-            unsigned short nn = chip->opcode & 0x00FF;
-            unsigned short x = chip->opcode & 0x0F00;
-            chip->v[x >> 8] = rand() & nn;
+            chip->v[x] = rand() & nn;
             chip->pc += 2;
             break;
         }
-        // - 0xDXYN
-        case 0xD000: {
-            int vx = chip->v[(chip->opcode & 0x0F00) >> 8];
-            int vy = chip->v[(chip->opcode & 0x00F0) >> 4];
+            // - 0xDXYN
+        case 0xD000: { // DXYN: Draws a sprite at coordinate (VX, VY) that has a
+                       // width of 8 pixels and a height of N pixels
+            unsigned int vx = chip->v[x];
+            unsigned int vy = chip->v[y];
             unsigned int height = chip->opcode & 0x000F;
             chip->v[0xF] &= 0;
+
             for (unsigned int y = 0; y < height; y++) {
                 unsigned int pixel = chip->memory[chip->index + y];
                 for (unsigned int x = 0; x < 8; x++) {
@@ -298,8 +285,8 @@ void emulate_cycle(Chip8 *chip) {
                     }
                 }
             }
-            chip->drawFlag = 1;
             chip->pc += 2;
+            chip->drawFlag = 1;
             break;
         }
         // - 0xEX9E
@@ -309,12 +296,12 @@ void emulate_cycle(Chip8 *chip) {
             switch (chip->opcode & 0x000F) {
                 // - 0xEX9E
                 case 0x000E: {
-                    chip->pc += chip->keys[chip->v[x >> 8]] == 1 ? 4 : 2;
+                    chip->pc += chip->keys[chip->v[x]] != 0 ? 4 : 2;
                     break;
                 }
                 // - 0xEXA1
                 case 0x0001: {
-                    chip->pc += chip->keys[chip->v[x >> 8]] == 0 ? 4 : 2;
+                    chip->pc += chip->keys[chip->v[x]] == 0 ? 4 : 2;
                     break;
                 }
                 default:
@@ -332,7 +319,6 @@ void emulate_cycle(Chip8 *chip) {
         // - 0xFX55
         // - 0xFX65
         case 0xF000: {
-            unsigned short x = (chip->opcode & 0x0F00) >> 8;
             switch (chip->opcode & 0x00FF) {
                 // - 0xFX07
                 case 0x0007: {
@@ -369,6 +355,7 @@ void emulate_cycle(Chip8 *chip) {
                 }
                 // - 0xFX1E
                 case 0x001E: {
+                    chip->v[0xF] = chip->index + chip->v[x] > 0x0FFF ? 1 : 0;
                     chip->index += chip->v[x];
                     chip->pc += 2;
                     break;
@@ -416,7 +403,7 @@ void emulate_cycle(Chip8 *chip) {
         --chip->delay_timer;
     if (chip->sound_timer > 0) {
         if (chip->sound_timer == 1)
-            printf("BEEP!\n");
+            printf("BUZZER!\n");
         --chip->sound_timer;
     }
 }
