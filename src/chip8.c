@@ -1,26 +1,55 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <err.h>
 
 #include "constants.h"
+#include "sdl_utils.h"
 #include "chip8.h"
+
+#define UNUSED(x) (void) (x)
+
+unsigned char Chip8fontset[80] = {
+  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+  0x20, 0x60, 0x20, 0x20, 0x70, // 1
+  0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+  0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+  0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+  0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+  0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+  0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+  0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+  0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+  0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+  0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+  0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+  0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+  0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+  0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
 void chip_initialize(Chip8 *chip) {
     chip->pc = 0x200;
     chip->opcode = 0;
     chip->index = 0;
     chip->sp = 0;
-
     // Load fontset
     for (int i = 0; i < 80; ++i)
         chip->memory[i] = Chip8fontset[i];
 }
 
-void unknown(short opcode) {
-    printf("Unknown opcode: 0x%X\n", opcode);
+void unknown(Chip8 *chip) {
+    printf("\033[1;31mUnknown opcode: 0x%04X\n\033[0m;", chip->opcode);
+    chip->pc += 2;
 }
 
-void emulateCycle(Chip8 *chip) {
-    chip->opcode = chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
+void emulate_cycle(Chip8 *chip) {
+    chip->opcode =  chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
+    printf("%d\n",  chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+    printf("  0x%04X\n",  chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+    printf("& 0x%04X\n", (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) & 0xF000);
+    printf("| 0x%04X\n", (chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]) & 0x000F);
+    printf("Executing %04X at %04X , I:%02X SP:%02X\n", chip->opcode, chip->pc,
+           chip->index, chip->sp);
     switch (chip->opcode & 0xF000) {
         // - 0xNNNN
         // - 0x00E0
@@ -43,7 +72,7 @@ void emulateCycle(Chip8 *chip) {
                     break;
                 }
                 default:
-                    unknown(chip->opcode);
+                    unknown(chip);
             }
             break;
         }
@@ -85,6 +114,7 @@ void emulateCycle(Chip8 *chip) {
             unsigned short x = chip->opcode & 0x0F00;
             unsigned short nn = chip->opcode & 0x00FF;
             chip->v[x >> 8] = nn;
+            chip->pc += 2;
             break;
         }
         // - 0x7XNN
@@ -92,6 +122,7 @@ void emulateCycle(Chip8 *chip) {
             unsigned short x = chip->opcode & 0x0F00;
             unsigned short nn = chip->opcode & 0x00FF;
             chip->v[x >> 8] += nn;
+            chip->pc += 2;
             break;
         }
         // - 0x8XY0
@@ -158,7 +189,7 @@ void emulateCycle(Chip8 *chip) {
                     break;
                 }
                 default:
-                    unknown(chip->opcode);
+                    unknown(chip);
             }
             chip->pc += 2;
             break;
@@ -236,7 +267,7 @@ void emulateCycle(Chip8 *chip) {
                     break;
                 }
                 default:
-                    unknown(chip->opcode);
+                    unknown(chip);
             }
             break;
         }
@@ -321,13 +352,13 @@ void emulateCycle(Chip8 *chip) {
                 }
 
                 default:
-                    unknown(chip->opcode);
+                    unknown(chip);
             }
             break;
         }
 
         default:
-            unknown(chip->opcode);
+            unknown(chip);
 
             if (chip->delay_timer > 0)
                 --chip->delay_timer;
@@ -337,4 +368,24 @@ void emulateCycle(Chip8 *chip) {
                 --chip->sound_timer;
             }
     }
+}
+
+void emulate_graphics(Chip8 *chip, SDL_Surface *screen) {
+    chip->drawFlag = 0;
+    for (size_t x = 0; x < WIDTH; x++) {
+        for (size_t y = 0; y < HEIGHT; y++) {
+            if (chip->memory[x * HEIGHT + y])
+                draw_pixel_square(screen, x, y);
+        }
+    }
+    SDL_Flip(screen);
+}
+
+void load_game(Chip8 *chip, char *path) {
+    FILE *f;
+    f = fopen(path, "rb");
+    if (!f)
+        errx(1, "Could not load game.\n");
+    size_t unused = fread(chip->memory + 80, 1, 4016, f);
+    UNUSED(unused);
 }

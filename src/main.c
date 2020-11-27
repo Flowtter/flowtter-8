@@ -3,7 +3,15 @@
 #include <err.h>
 
 #include "constants.h"
+#include "chip8.h"
 #include "sdl_utils.h"
+
+void PRINT_MEMORY(Chip8 chip) {
+    for (int i = 0; i < 4096; i++) {
+        printf("%d ", chip.memory[i]);
+    }
+    printf("\n");
+}
 
 int main() {
     SDL_Surface *screen;
@@ -15,18 +23,23 @@ int main() {
                               SDL_HWSURFACE);
     SDL_WM_SetCaption("Flowtter-8", NULL);
 
-    draw_pixel_square(screen, 3, 3);
-    draw_pixel_square(screen, 4, 4);
-    draw_pixel_square(screen, 5, 5);
-
-    SDL_Flip(screen);
-
+    Chip8 chip;
+    chip_initialize(&chip);
+    load_game(&chip, "BCTEST");
+    // PRINT_MEMORY(chip);
+    // return 0;
+    // TODO : Clock
     int loop = 1;
     SDL_Event event;
     while (loop) {
         SDL_WaitEvent(&event);
         if (event.type == SDL_QUIT)
             loop = 0;
+
+        emulate_cycle(&chip);
+
+        if (1 || chip.drawFlag)
+            emulate_graphics(&chip, screen);
     }
 
     return 0;
