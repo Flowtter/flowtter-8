@@ -1,6 +1,5 @@
 *.swp
 chip8
 include/*.h.gch
-Makefile
 PONG
 .vscode/*
